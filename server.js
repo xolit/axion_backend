@@ -18,7 +18,11 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('combined'));
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+const limiter = rateLimit({
+  windowMs: 2 * 60 * 1000,
+  max: 8,
+  message: 'Too many requests from this IP, please try again after 2 minutes',
+});
 app.use(limiter);
 app.use(authMiddleware);
 
