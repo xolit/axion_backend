@@ -9,6 +9,7 @@ const connectMongo = require('./db/mongo');
 const redisClient = require('./db/redisClient');
 
 const moviesRouter = require('./apis/movies/movies.route');
+const authMiddleware = require('./middlewares/auth');
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(morgan('combined'));
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 app.use(limiter);
+app.use(authMiddleware);
 
 app.use('/movie', moviesRouter);
 app.use('/home', moviesRouter);
