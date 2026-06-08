@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -9,6 +10,8 @@ const connectMongo = require('./db/mongo');
 const redisClient = require('./db/redisClient');
 
 const moviesRouter = require('./apis/movies/movies.route');
+const requestsRouter = require('./apis/requests/requests.route');
+const adminRouter = require('./apis/admin/admin.route');
 const authMiddleware = require('./middlewares/auth');
 
 const app = express();
@@ -16,7 +19,11 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));
+
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
 
 const limiter = rateLimit({
   windowMs: 2 * 60 * 1000,
@@ -28,6 +35,8 @@ app.use(authMiddleware);
 
 app.use('/movie', moviesRouter);
 app.use('/home', moviesRouter);
+app.use('/Request', requestsRouter);
+app.use('/admin', adminRouter);
 
 app.get('/', (req, res) => res.json({ ok: true, service: 'movies-backend' }));
 

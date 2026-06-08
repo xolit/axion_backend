@@ -1,0 +1,152 @@
+const express = require('express');
+const Movie = require('../movies/movie.model');
+
+const router = express.Router();
+
+function getAdminCredentials(req) {
+  return {
+    accessToken: req.query.accessToken || req.body.accessToken,
+    adminPass: req.query.adminPass || req.body.adminPass
+  };
+}
+
+function buildAdminRedirect(req, extras = {}) {
+  const { accessToken, adminPass } = getAdminCredentials(req);
+  const searchTitle = req.query.searchTitle || req.body.searchTitle;
+  const params = new URLSearchParams({ accessToken, adminPass, ...(searchTitle ? { searchTitle } : {}), ...extras });
+  return `/admin?${params.toString()}`;
+}
+
+function parseType(raw) {
+  if (!raw) return [];
+  return String(raw)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseSource(raw) {
+  const result = {};
+  if (!raw) return result;
+
+  const trimmed = String(raw).trim();
+  if (!trimmed) return result;
+
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch (_err) {
+      // fallback to line parsing
+    }
+  }
+
+  trimmed.split(/\r?\n/).forEach((line) => {
+    const [key, value] = line.split('=').map((part) => part && part.trim());
+    if (key && value) {
+      result[key] = value;
+    }
+  });
+
+  return result;
+}
+
+function ensureAdmin(req, res, next) {
+  const { adminPass } = getAdminCredentials(req);
+  const expectedPass = process.env.ADMIN_PASS;
+
+  if (!expectedPass) {
+    return res.status(500).send('Server missing ADMIN_PASS configuration');
+  }
+
+  if (!adminPass || adminPass !== expectedPass) {
+    return res.status(401).send('Unauthorized admin access');
+  }
+
+  next();
+}
+
+router.get('/', ensureAdmin, async (req, res, next) => {
+  try {
+    const { accessToken, adminPass } = getAdminCredentials(req);
+    const searchTitle = (req.query.searchTitle || '').trim();
+    const query = {};
+
+    if (searchTitle) {
+      query.title = { $regex: searchTitle, $options: 'i' };
+    }
+
+    const movies = await Movie.find(query).sort({ createdAt: -1 }).lean();
+    return res.render('admin', {
+      movies,
+      accessToken,
+      adminPass,
+      searchTitle,
+      success: req.query.success || null,
+      error: req.query.error || null
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/movie/add', ensureAdmin, async (req, res, next) => {
+  try {
+    const title = (req.body.title || '').trim();
+    if (!title) {
+      return res.redirect(buildAdminRedirect(req, { error: 'Title is required.' }));
+    }
+
+    const movie = new Movie({
+      title,
+      release: (req.body.release || '').trim(),
+      Type: parseType(req.body.Type),
+      Source: parseSource(req.body.Source),
+      bannerUrl: (req.body.bannerUrl || '').trim()
+    });
+
+    await movie.save();
+    return res.redirect(buildAdminRedirect(req, { success: 'Movie added successfully.' }));
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.redirect(buildAdminRedirect(req, { error: 'Invalid movie data.' }));
+    }
+    next(err);
+  }
+});
+
+router.post('/movie/update/:id', ensureAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const title = (req.body.title || '').trim();
+    if (!title) {
+      return res.redirect(buildAdminRedirect(req, { error: 'Title is required for update.' }));
+    }
+
+    await Movie.findByIdAndUpdate(id, {
+      title,
+      release: (req.body.release || '').trim(),
+      Type: parseType(req.body.Type),
+      Source: parseSource(req.body.Source),
+      bannerUrl: (req.body.bannerUrl || '').trim()
+    }, { runValidators: true });
+
+    return res.redirect(buildAdminRedirect(req, { success: 'Movie updated successfully.' }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/movie/delete/:id', ensureAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await Movie.findByIdAndDelete(id);
+    return res.redirect(buildAdminRedirect(req, { success: 'Movie deleted successfully.' }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;
