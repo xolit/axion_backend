@@ -26,6 +26,24 @@ function parseType(raw) {
     .filter(Boolean);
 }
 
+function detectPlatformFromUrl(url) {
+  const platforms = {
+    'multimovies': 'Multimovies',
+    'onemovies': 'OneMovies',
+    'streamimbd': 'StreamImbd',
+    'cineby': 'CineBy',
+    'cinehd': 'CineHD'
+  };
+
+  const lowerUrl = url.toLowerCase();
+  for (const [key, name] of Object.entries(platforms)) {
+    if (lowerUrl.includes(key)) {
+      return name;
+    }
+  }
+  return null;
+}
+
 function parseSource(raw) {
   const result = {};
   if (!raw) return result;
@@ -45,9 +63,21 @@ function parseSource(raw) {
   }
 
   trimmed.split(/\r?\n/).forEach((line) => {
-    const [key, value] = line.split('=').map((part) => part && part.trim());
-    if (key && value) {
-      result[key] = value;
+    const cleanLine = line && line.trim();
+    if (!cleanLine) return;
+
+    // Check if line is a URL (contains = for key=value format)
+    if (cleanLine.includes('=')) {
+      const [key, value] = cleanLine.split('=').map((part) => part && part.trim());
+      if (key && value) {
+        result[key] = value;
+      }
+    } else if (cleanLine.startsWith('http://') || cleanLine.startsWith('https://')) {
+      // Auto-detect platform from URL
+      const detectedPlatform = detectPlatformFromUrl(cleanLine);
+      if (detectedPlatform) {
+        result[detectedPlatform] = cleanLine;
+      }
     }
   });
 
