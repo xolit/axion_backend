@@ -1,5 +1,6 @@
 const express = require('express');
 const Movie = require('../movies/movie.model');
+const MovieRequest = require('../movies/movieRequest.model');
 
 const router = express.Router();
 
@@ -72,15 +73,17 @@ router.get('/', ensureAdmin, async (req, res, next) => {
   try {
     const { accessToken, adminPass } = getAdminCredentials(req);
     const searchTitle = (req.query.searchTitle || '').trim();
-    const query = {};
+    let movies = [];
 
     if (searchTitle) {
-      query.title = { $regex: searchTitle, $options: 'i' };
+      movies = await Movie.find({ title: { $regex: searchTitle, $options: 'i' } }).sort({ createdAt: -1 }).lean();
     }
 
-    const movies = await Movie.find(query).sort({ createdAt: -1 }).lean();
+    const upcomingRequests = await MovieRequest.find({ status: 'pending' }).sort({ requestedAt: -1 }).lean();
+
     return res.render('admin', {
       movies,
+      upcomingRequests,
       accessToken,
       adminPass,
       searchTitle,
@@ -144,6 +147,28 @@ router.post('/movie/delete/:id', ensureAdmin, async (req, res, next) => {
     const { id } = req.params;
     await Movie.findByIdAndDelete(id);
     return res.redirect(buildAdminRedirect(req, { success: 'Movie deleted successfully.' }));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/request/status/:id', ensureAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const status = (req.body.status || '').trim().toLowerCase();
+    const allowed = ['pending', 'approved', 'rejected'];
+
+    if (!allowed.includes(status)) {
+      return res.redirect(buildAdminRedirect(req, { error: 'Invalid status.' }));
+    }
+
+    if (status === 'pending') {
+      await MovieRequest.findByIdAndUpdate(id, { status }, { runValidators: true });
+      return res.redirect(buildAdminRedirect(req, { success: 'Request remains pending.' }));
+    }
+
+    await MovieRequest.findByIdAndDelete(id);
+    return res.redirect(buildAdminRedirect(req, { success: `Request ${status} and removed.` }));
   } catch (err) {
     next(err);
   }

@@ -30,12 +30,12 @@ const limiter = rateLimit({
   max: 8,
   message: 'Too many requests from this IP, please try again after 2 minutes',
 });
-app.use(limiter);
+
 app.use(authMiddleware);
 
-app.use('/movie', moviesRouter);
-app.use('/home', moviesRouter);
-app.use('/Request', requestsRouter);
+app.use('/movie',limiter, moviesRouter);
+app.use('/home',limiter, moviesRouter);
+app.use('/Request',limiter, requestsRouter);
 app.use('/admin', adminRouter);
 
 app.get('/', (req, res) => res.json({ ok: true, service: 'movies-backend' }));
