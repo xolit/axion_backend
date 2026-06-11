@@ -11,6 +11,7 @@ const redisClient = require('./db/redisClient');
 
 const moviesRouter = require('./apis/movies/movies.route');
 const requestsRouter = require('./apis/requests/requests.route');
+const notifsRouter = require('./apis/notifs/notif.route');
 const adminRouter = require('./apis/admin/admin.route');
 const authMiddleware = require('./middlewares/auth');
 
@@ -36,6 +37,7 @@ app.use(authMiddleware);
 app.use('/movie',limiter, moviesRouter);
 app.use('/home',limiter, moviesRouter);
 app.use('/Request',limiter, requestsRouter);
+app.use('/notifs', limiter, notifsRouter);
 app.use('/admin', adminRouter);
 
 app.get('/', (req, res) => res.json({ ok: true, service: 'movies-backend' }));

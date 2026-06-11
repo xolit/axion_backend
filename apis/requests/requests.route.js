@@ -28,9 +28,9 @@ router.post('/movie', async (req, res, next) => {
     });
 
     if (existingRequest) {
-      return res.status(409).json({
-        success: false,
-        message: 'A request for this movie is already pending.'
+      return res.status(201).json({
+        success: true,
+        message: 'Movie request submitted successfully.'
       });
     }
 

@@ -71,6 +71,34 @@
     </form>
   </section>
 
+<section>
+  <h2>Add a Notification</h2>
+
+  <form action="/notifs/add?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post">
+
+    <input type="hidden" name="accessToken" value="<%= accessToken %>" />
+    <input type="hidden" name="adminPass" value="<%= adminPass %>" />
+
+    <label for="notifTitle">Title</label>
+    <input
+      id="notifTitle"
+      name="title"
+      type="text"
+      required
+      placeholder="Notification title"
+    />
+
+    <label for="notifDescription">Description</label>
+    <textarea
+      id="notifDescription"
+      name="description"
+      placeholder="Notification description (optional)"
+    ></textarea>
+
+    <button type="submit">Add Notification</button>
+  </form>
+</section>
+
   <section>
     <h2>Upcoming Movie Requests</h2>
     <% if (!upcomingRequests || upcomingRequests.length === 0) { %>
@@ -153,5 +181,6 @@
     <% }); %>
     <% } %>
   </section>
+
 </body>
 </html>
