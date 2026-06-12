@@ -1,0 +1,29 @@
+<section>
+  <h2>Upcoming Movie Requests</h2>
+  <% if (!upcomingRequests || upcomingRequests.length === 0) { %>
+    <p>No pending requests found.</p>
+  <% } else { %>
+    <ul>
+      <% upcomingRequests.forEach((request) => { %>
+        <li>
+          <strong><%= request.title %></strong>
+          <span>(requested at <%= new Date(request.requestedAt).toLocaleString() %>)</span>
+          <div>Status: <strong><%= request.status %></strong></div>
+          <% if (request.message) { %>
+            <div><em><%= request.message %></em></div>
+          <% } %>
+          <div class="request-actions">
+            <% ['pending', 'approved', 'rejected'].forEach((status) => { %>
+              <form action="/admin/request/status/<%= request._id %>?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post" style="display:inline-block; margin-right:8px;">
+                <input type="hidden" name="status" value="<%= status %>" />
+                <input type="hidden" name="accessToken" value="<%= accessToken %>" />
+                <input type="hidden" name="adminPass" value="<%= adminPass %>" />
+                <button type="submit" <%= request.status === status ? 'disabled' : '' %>><%= status.charAt(0).toUpperCase() + status.slice(1) %></button>
+              </form>
+            <% }); %>
+          </div>
+        </li>
+      <% }); %>
+    </ul>
+  <% } %>
+</section>

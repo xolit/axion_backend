@@ -6,8 +6,8 @@ const notificationsSchema = new mongoose.Schema({
   createdAt: {
         type: Date,
         default: Date.now,
-        expires: 86400 // 24 hours in seconds
-        // expires: 5 // 5 seconds for testing
+        expires: "24h" // 24 hours
+        // expires: "5s" // 5 seconds for testing
     }
 });
 

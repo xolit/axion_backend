@@ -1,5 +1,6 @@
 const express = require('express');
 const Notification = require('../movies/notif.model');
+const limiter = require('../../service/limiter');
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ function ensureAdmin(req, res, next) {
 }
 
 // GET /notifs - Get all notifications (for frontend)
-router.get('/', async (req, res, next) => {
+router.get('/', limiter, async (req, res, next) => {
   try {
     const auth_query = req.query.accessToken;
     const expectedToken = process.env.ACCESS_TOKEN;
@@ -47,8 +48,21 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// POST /notifs/add - Add notification (admin only)
-router.post('/add', ensureAdmin, async (req, res, next) => {
+// GET /notifs/admin - Get all notifications (admin only)
+router.get('/admin', ensureAdmin, async (req, res, next) => {
+  try {
+    const notifications = await Notification.find().sort({ createdAt: -1 }).lean();
+    return res.json({
+      ok: true,
+      data: notifications
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /notifs/admin/add - Add notification (admin only)
+router.post('/admin/add', ensureAdmin, async (req, res, next) => {
   try {
     const title = (req.body.title || '').trim();
     const description = (req.body.description || '').trim();
@@ -72,6 +86,25 @@ router.post('/add', ensureAdmin, async (req, res, next) => {
     if (err.name === 'ValidationError') {
       return res.status(400).json({ error: 'Invalid notification data.' });
     }
+    next(err);
+  }
+});
+
+// DELETE /notifs/admin/delete/:id - Delete notification (admin only)
+router.delete('/admin/delete/:id', ensureAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const deletedNotif = await Notification.findByIdAndDelete(id);
+
+    if (!deletedNotif) {
+      return res.status(404).json({ error: 'Notification not found.' });
+    }
+
+    return res.json({
+      ok: true,
+      message: 'Notification deleted successfully.'
+    });
+  } catch (err) {
     next(err);
   }
 });

@@ -1,0 +1,52 @@
+<section>
+  <h2>Existing Movies</h2>
+  <% if (!searchTitle) { %>
+    <p>Search for a title to see and manage matching movies.</p>
+  <% } else if (!movies || movies.length === 0) { %>
+    <p>No movies found for "<%= searchTitle %>".</p>
+  <% } %>
+
+  <% if (searchTitle && movies && movies.length > 0) { %>
+    <% movies.forEach((movie) => { %>
+    <div class="movie-item">
+      <h3><%= movie.title %> (<%= movie.release || 'unknown' %>)</h3>
+      <form action="/admin/movie/update/<%= movie._id %>?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post">
+        <input type="hidden" name="accessToken" value="<%= accessToken %>" />
+        <input type="hidden" name="adminPass" value="<%= adminPass %>" />
+        <% if (searchTitle) { %>
+          <input type="hidden" name="searchTitle" value="<%= searchTitle %>" />
+        <% } %>
+
+        <label>Title</label>
+        <input name="title" type="text" value="<%= movie.title %>" required />
+
+        <label>Release</label>
+        <input name="release" type="text" value="<%= movie.release || '' %>" />
+
+        <label>Genres / Type</label>
+        <input name="Type" type="text" value="<%= (movie.Type || []).join(', ') %>" />
+
+        <label>Sources</label>
+        <textarea name="Source"><%=
+          (movie.Source && Object.entries(movie.Source).map(([key, value]) => `${key}=${value}`).join('\n')) || ''
+        %></textarea>
+
+        <label>Banner URL</label>
+        <input name="bannerUrl" type="text" value="<%= movie.bannerUrl || '' %>" />
+
+        <div class="movie-actions">
+          <button type="submit">Update</button>
+      </form>
+      <form action="/admin/movie/delete/<%= movie._id %>?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post" style="margin:0;">
+        <input type="hidden" name="accessToken" value="<%= accessToken %>" />
+        <input type="hidden" name="adminPass" value="<%= adminPass %>" />
+        <% if (searchTitle) { %>
+          <input type="hidden" name="searchTitle" value="<%= searchTitle %>" />
+        <% } %>
+        <button type="submit">Delete</button>
+      </form>
+        </div>
+    </div>
+    <% }); %>
+  <% } %>
+</section>

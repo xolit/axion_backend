@@ -1,0 +1,14 @@
+<section>
+  <h2>Search Existing Movie</h2>
+  <form action="/admin" method="get">
+    <input type="hidden" name="accessToken" value="<%= accessToken %>" />
+    <input type="hidden" name="adminPass" value="<%= adminPass %>" />
+
+    <label for="searchTitle">Title</label>
+    <input id="searchTitle" name="searchTitle" type="text" value="<%= searchTitle || '' %>" placeholder="Search by title" />
+    <button type="submit">Search</button>
+    <% if (searchTitle) { %>
+      <a href="/admin?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>">Clear search</a>
+    <% } %>
+  </form>
+</section>

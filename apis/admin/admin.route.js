@@ -1,6 +1,7 @@
 const express = require('express');
 const Movie = require('../movies/movie.model');
 const MovieRequest = require('../movies/movieRequest.model');
+const Notification = require('../movies/notif.model');
 
 const router = express.Router();
 
@@ -110,10 +111,12 @@ router.get('/', ensureAdmin, async (req, res, next) => {
     }
 
     const upcomingRequests = await MovieRequest.find({ status: 'pending' }).sort({ requestedAt: -1 }).lean();
+    const notifications = await Notification.find().sort({ createdAt: -1 }).lean();
 
     return res.render('admin', {
       movies,
       upcomingRequests,
+      notifications,
       accessToken,
       adminPass,
       searchTitle,

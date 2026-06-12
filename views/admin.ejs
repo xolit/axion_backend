@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Movie Management</title>
+  <title>Admin Dashboard</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 24px; }
     h1, h2 { margin-bottom: 8px; }
@@ -18,10 +18,22 @@
     .movie-item h3 { margin: 0 0 8px; }
     .movie-actions { display: flex; gap: 8px; margin-top: 8px; }
     button { padding: 8px 14px; cursor: pointer; }
+    section { margin-bottom: 40px; }
+    #notifMessage { margin-top: 10px; }
+    #submit_btn_fornotif_add { margin-top: 10px; padding: 10px 20px; cursor: pointer; }
+    .notifications-table-container { overflow-x: auto; }
+    .notifications-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .notifications-table thead tr { background-color: #f5f5f5; border-bottom: 2px solid #ddd; }
+    .notifications-table th { padding: 10px; text-align: left; }
+    .notifications-table td { padding: 10px; border-bottom: 1px solid #ddd; }
+    .notifications-table .actions { text-align: center; }
+    .delete-btn { background-color: #d15656; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; }
+    .delete-btn:hover { background-color: #c14444; }
+    #deleteMessage { margin-top: 15px; }
   </style>
 </head>
 <body>
-  <h1>Admin Movie Management</h1>
+  <h1>Admin Dashboard</h1>
   <p>Use <strong>accessToken</strong> and <strong>adminPass</strong> in the query string to access this page.</p>
 
   <% if (success) { %>
@@ -31,156 +43,83 @@
     <div class="message error"><%= error %></div>
   <% } %>
 
-  <section>
-    <h2>Search Existing Movie</h2>
-    <form action="/admin" method="get">
-      <input type="hidden" name="accessToken" value="<%= accessToken %>" />
-      <input type="hidden" name="adminPass" value="<%= adminPass %>" />
+  <!-- Movies Management Section -->
+  <h2>Movie Management</h2>
+  <%- include('./admin/search-movie') %>
+  <%- include('./admin/add-movie') %>
+  <%- include('./admin/existing-movies') %>
+  <%- include('./admin/movie-requests') %>
 
-      <label for="searchTitle">Title</label>
-      <input id="searchTitle" name="searchTitle" type="text" value="<%= searchTitle || '' %>" placeholder="Search by title" />
-      <button type="submit">Search</button>
-      <% if (searchTitle) { %>
-        <a href="/admin?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>">Clear search</a>
-      <% } %>
-    </form>
-  </section>
+  <!-- Notifications Management Section -->
+  <h2>Notification Management</h2>
+  <%- include('./admin/add-notification') %>
+  <%- include('./admin/existing-notifications') %>
 
-  <section>
-    <h2>Add a New Movie</h2>
-    <form action="/admin/movie/add?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post">
-      <input type="hidden" name="accessToken" value="<%= accessToken %>" />
-      <input type="hidden" name="adminPass" value="<%= adminPass %>" />
+  <script>
+    // Handle notification form submission
+    async function handleNotificationSubmit(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      
+      const notifMessage = document.getElementById('notifMessage');
+      const titleInput = document.getElementById('notifTitle');
+      const descriptionInput = document.getElementById('notifDescription');
+      const submitButton = document.getElementById('submit_btn_fornotif_add');
+      
+      if (!titleInput || !descriptionInput) {
+        console.error('Form inputs not found');
+        notifMessage.innerHTML = '<div class="message error">Form inputs not found</div>';
+        return false;
+      }
+      
+      const title = titleInput.value.trim();
+      const description = descriptionInput.value.trim();
 
-      <label for="title">Title</label>
-      <input id="title" name="title" type="text" required />
+      if (!title) {
+        notifMessage.innerHTML = '<div class="message error">Title is required.</div>';
+        return false;
+      }
 
-      <label for="release">Release</label>
-      <input id="release" name="release" type="text" />
-
-      <label for="Type">Genres / Type (comma separated)</label>
-      <input id="Type" name="Type" type="text" placeholder="Action, Comedy, Drama" />
-
-      <label for="Source">Sources (paste URLs or use key=value format)</label>
-      <textarea id="Source" name="Source" placeholder="https://multimovies.com/movie/123&#10;https://onemovies.io/watch/456&#10;or&#10;Multimovies=https://multimovies.com/movie/123&#10;OneMovies=https://onemovies.io/watch/456"></textarea>
-
-      <label for="bannerUrl">Banner URL</label>
-      <input id="bannerUrl" name="bannerUrl" type="text" />
-
-      <button type="submit">Add Movie</button>
-    </form>
-  </section>
-
-<section>
-  <h2>Add a Notification</h2>
-
-  <form action="/notifs/add?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post">
-
-    <input type="hidden" name="accessToken" value="<%= accessToken %>" />
-    <input type="hidden" name="adminPass" value="<%= adminPass %>" />
-
-    <label for="notifTitle">Title</label>
-    <input
-      id="notifTitle"
-      name="title"
-      type="text"
-      required
-      placeholder="Notification title"
-    />
-
-    <label for="notifDescription">Description</label>
-    <textarea
-      id="notifDescription"
-      name="description"
-      placeholder="Notification description (optional)"
-    ></textarea>
-
-    <button type="submit">Add Notification</button>
-  </form>
-</section>
-
-  <section>
-    <h2>Upcoming Movie Requests</h2>
-    <% if (!upcomingRequests || upcomingRequests.length === 0) { %>
-      <p>No pending requests found.</p>
-    <% } else { %>
-      <ul>
-        <% upcomingRequests.forEach((request) => { %>
-          <li>
-            <strong><%= request.title %></strong>
-            <span>(requested at <%= new Date(request.requestedAt).toLocaleString() %>)</span>
-            <div>Status: <strong><%= request.status %></strong></div>
-            <% if (request.message) { %>
-              <div><em><%= request.message %></em></div>
-            <% } %>
-            <div class="request-actions">
-              <% ['pending', 'approved', 'rejected'].forEach((status) => { %>
-                <form action="/admin/request/status/<%= request._id %>?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post" style="display:inline-block; margin-right:8px;">
-                  <input type="hidden" name="status" value="<%= status %>" />
-                  <input type="hidden" name="accessToken" value="<%= accessToken %>" />
-                  <input type="hidden" name="adminPass" value="<%= adminPass %>" />
-                  <button type="submit" <%= request.status === status ? 'disabled' : '' %>><%= status.charAt(0).toUpperCase() + status.slice(1) %></button>
-                </form>
-              <% }); %>
-            </div>
-          </li>
-        <% }); %>
-      </ul>
-    <% } %>
-  </section>
-
-  <section>
-    <h2>Existing Movies</h2>
-    <% if (!searchTitle) { %>
-      <p>Search for a title to see and manage matching movies.</p>
-    <% } else if (!movies || movies.length === 0) { %>
-      <p>No movies found for "<%= searchTitle %>".</p>
-    <% } %>
-
-    <% if (searchTitle && movies && movies.length > 0) { %>
-      <% movies.forEach((movie) => { %>
-      <div class="movie-item">
-        <h3><%= movie.title %> (<%= movie.release || 'unknown' %>)</h3>
-        <form action="/admin/movie/update/<%= movie._id %>?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post">
-          <input type="hidden" name="accessToken" value="<%= accessToken %>" />
-          <input type="hidden" name="adminPass" value="<%= adminPass %>" />
-          <% if (searchTitle) { %>
-            <input type="hidden" name="searchTitle" value="<%= searchTitle %>" />
-          <% } %>
-
-          <label>Title</label>
-          <input name="title" type="text" value="<%= movie.title %>" required />
-
-          <label>Release</label>
-          <input name="release" type="text" value="<%= movie.release || '' %>" />
-
-          <label>Genres / Type</label>
-          <input name="Type" type="text" value="<%= (movie.Type || []).join(', ') %>" />
-
-          <label>Sources</label>
-          <textarea name="Source"><%=
-            (movie.Source && Object.entries(movie.Source).map(([key, value]) => `${key}=${value}`).join('\n')) || ''
-          %></textarea>
-
-          <label>Banner URL</label>
-          <input name="bannerUrl" type="text" value="<%= movie.bannerUrl || '' %>" />
-
-          <div class="movie-actions">
-            <button type="submit">Update</button>
-        </form>
-        <form action="/admin/movie/delete/<%= movie._id %>?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post" style="margin:0;">
-          <input type="hidden" name="accessToken" value="<%= accessToken %>" />
-          <input type="hidden" name="adminPass" value="<%= adminPass %>" />
-          <% if (searchTitle) { %>
-            <input type="hidden" name="searchTitle" value="<%= searchTitle %>" />
-          <% } %>
-          <button type="submit">Delete</button>
-        </form>
-          </div>
-      </div>
-    <% }); %>
-    <% } %>
-  </section>
-
+      const accessToken = '<%= accessToken %>';
+      const adminPass = '<%= adminPass %>';
+      
+      submitButton.disabled = true;
+      
+      try {
+        const response = await fetch('/notifs/admin/add?accessToken=' + encodeURIComponent(accessToken) + '&adminPass=' + encodeURIComponent(adminPass), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, description })
+        });
+        
+        console.log('Response status:', response.status);
+        
+        const result = await response.json();
+        console.log('Result:', result);
+        
+        if (response.ok && (result.ok || result.message)) {
+          notifMessage.innerHTML = '<div class="message success">' + (result.message || 'Notification added successfully!') + '</div>';
+          document.getElementById('notifTitle').value = '';
+          document.getElementById('notifDescription').value = '';
+          submitButton.disabled = false;
+          setTimeout(() => { 
+            notifMessage.innerHTML = ''; 
+            location.reload();
+          }, 1500);
+        } else {
+          notifMessage.innerHTML = '<div class="message error">' + (result.error || 'Failed to add notification') + '</div>';
+          submitButton.disabled = false;
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        notifMessage.innerHTML = '<div class="message error">Error: ' + err.message + '</div>';
+        submitButton.disabled = false;
+      }
+      return false;
+      return false;
+    }
+  </script>
 </body>
 </html>

@@ -4,7 +4,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
+const limiter = require('./service/limiter');
 
 const connectMongo = require('./db/mongo');
 const redisClient = require('./db/redisClient');
@@ -17,7 +17,16 @@ const authMiddleware = require('./middlewares/auth');
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+}));
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,19 +34,15 @@ app.use(morgan('combined'));
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
-
-const limiter = rateLimit({
-  windowMs: 2 * 60 * 1000,
-  max: 8,
-  message: 'Too many requests from this IP, please try again after 2 minutes',
-});
+ 
 
 app.use(authMiddleware);
 
 app.use('/movie',limiter, moviesRouter);
 app.use('/home',limiter, moviesRouter);
 app.use('/Request',limiter, requestsRouter);
-app.use('/notifs', limiter, notifsRouter);
+// in notifs route added limiter in specific route to avoid rate limiting for admin access, but still protect public access
+app.use('/notifs', notifsRouter);
 app.use('/admin', adminRouter);
 
 app.get('/', (req, res) => res.json({ ok: true, service: 'movies-backend' }));

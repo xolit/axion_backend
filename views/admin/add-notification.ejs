@@ -1,0 +1,26 @@
+<section>
+  <h2>Add a Notification</h2>
+  <div id="notificationFormContainer">
+    <label for="notifTitle">Title</label>
+    <input id="notifTitle" type="text" required placeholder="Notification title" />
+
+    <label for="notifDescription">Description</label>
+    <textarea id="notifDescription" placeholder="Notification description (optional)"></textarea>
+
+    <button type="button" id="submit_btn_fornotif_add">Add Notification</button>
+    <div id="notifMessage"></div>
+  </div>
+</section>
+
+<script>
+  // Attach click handler to the button
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('submit_btn_fornotif_add');
+    if (btn) {
+      btn.addEventListener('click', function(e) {
+        console.log('Button clicked');
+        handleNotificationSubmit(e);
+      });
+    }
+  });
+</script>
