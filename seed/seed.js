@@ -1,6 +1,7 @@
 require("dotenv").config();
 const connectMongo = require("../db/mongo");
 const Movie = require("../apis/movies/movie.model");
+const { ObjectId } = require("mongodb"); 
 
 async function run() {
   await connectMongo();
@@ -23,7 +24,64 @@ async function run() {
   process.exit(0);
 }
 
-run().catch((err) => {
+
+async function updateAllMultimoviesDomains() {
+  try {
+    // 1. Ensure database is connected
+    await connectMongo();
+    console.log("Database connected successfully.");
+    const old_domain = ".homes";
+    const new_domain = ".makeup";
+
+    // 2. Filter: Target documents where the old URL domain exists in "Source.Multimovies"
+    const filter = { "Source.Multimovies": { $regex: `^https://multimovies\\${old_domain}` } };
+
+    // 3. Define the update pipeline targeting the CAPITALIZED "Source" key
+    const updatePipeline = [
+      {
+        $set: {
+          "Source.Multimovies": {
+            $replaceOne: {
+              input: "$Source.Multimovies",
+              find: `https://multimovies${old_domain}`,
+              replacement: `https://multimovies${new_domain}`
+            }
+          }
+        }
+      }
+    ];
+
+    // 4. Execute updateMany to apply changes globally
+    console.log("Updating all documents, please wait...");
+    const result = await Movie.updateMany(filter, updatePipeline);
+
+    // 5. Output processing metrics
+    console.log(`Matched documents: ${result.matchedCount}`);
+    console.log(`Successfully updated documents: ${result.modifiedCount}`);
+    
+    process.exit(0);
+
+  } catch (error) {
+    console.error("Global update failed:", error);
+    process.exit(1);
+  }
+}
+
+async function expireNotifEarlyDeletion() {
+  try {
+    await connectMongo();
+    const result = Movie.notifications.getIndexes("notifications");
+    console.log("Current indexes on notifications collection:", result);
+    console.log("Waiting for expired notifications to be automatically deleted...");
+  } catch (error) {
+    console.error("Failed to delete expired notifications:", error);
+    process.exit(1);
+  }
+}
+
+
+// Execute the single document update
+expireNotifEarlyDeletion().catch((err) => {
   console.error(err);
   process.exit(1);
 });
