@@ -34,7 +34,7 @@
 </head>
 <body>
   <h1>Admin Dashboard</h1>
-  <p>Use <strong>accessToken</strong> and <strong>adminPass</strong> in the query string to access this page.</p>
+  only for admin use. Please be careful with the actions you take here.
 
   <% if (success) { %>
     <div class="message success"><%= success %></div>
@@ -55,6 +55,9 @@
   <%- include('./admin/add-notification') %>
   <%- include('./admin/existing-notifications') %>
 
+  <!-- Domain Change Section -->
+  <%- include('./admin/change-domain-multimovies') %>
+  
   <script>
     // Handle notification form submission
     async function handleNotificationSubmit(event) {
