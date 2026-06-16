@@ -136,7 +136,7 @@ router.post('/movie/add', ensureAdmin, async (req, res, next) => {
     }
 
     // if movie exists
-    const movie_already_exists = await Movie.findOne({ title: { $regex: `^${title}$`, $options: 'i' } });
+    const movie_already_exists = await Movie.findOne({ title: { $regex: `^${title}$`, $options: 'i' }, release: (req.body.release || '').trim(), Type: parseType(req.body.Type), SubGenere: parseType(req.body.SubGenere), Wood: parseType(req.body.Wood) });
     if (movie_already_exists) {
       return res.redirect(buildAdminRedirect(req, { error: 'Movie with this title already exists.' }));
     }
