@@ -140,6 +140,8 @@ router.post('/movie/add', ensureAdmin, async (req, res, next) => {
       release: (req.body.release || '').trim(),
       Type: parseType(req.body.Type),
       Source: parseSource(req.body.Source),
+      SubGenere: parseType(req.body.SubGenere),
+      Wood: parseType(req.body.Wood),
       bannerUrl: (req.body.bannerUrl || '').trim()
     });
 
@@ -166,6 +168,8 @@ router.post('/movie/update/:id', ensureAdmin, async (req, res, next) => {
       release: (req.body.release || '').trim(),
       Type: parseType(req.body.Type),
       Source: parseSource(req.body.Source),
+      SubGenere: parseType(req.body.SubGenere),
+      Wood: parseType(req.body.Wood),
       bannerUrl: (req.body.bannerUrl || '').trim()
     }, { runValidators: true });
 

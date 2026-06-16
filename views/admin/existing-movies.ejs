@@ -26,6 +26,12 @@
         <label>Genres / Type</label>
         <input name="Type" type="text" value="<%= (movie.Type || []).join(', ') %>" />
 
+        <label>SubGenre</label>
+        <input name="SubGenere" type="text" value="<%= (movie.SubGenere || []).join(', ') %>" />
+        
+        <label>Wood</label>
+        <input name="Wood" type="text" value="<%= (movie.Wood || []).join(', ') %>" />
+
         <label>Sources</label>
         <textarea name="Source"><%=
           (movie.Source && Object.entries(movie.Source).map(([key, value]) => `${key}=${value}`).join('\n')) || ''

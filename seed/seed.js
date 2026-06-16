@@ -5,22 +5,12 @@ const { ObjectId } = require("mongodb");
 
 async function run() {
   await connectMongo();
-  await Movie.deleteMany({});
+  // await Movie.deleteMany({});
 
-  const sample = [
-  {
-    "title": "Ramayana",
-    "release": "2026",
-    "type": [],
-    "sources": {
-      "Multimovies": "https://multimovies.com/movie/123"
-    },
-    "bannerUrl": "https://resizing.flixster.com/8iYKTCLToL1UOcCX-73V7rvrc1s=/fit-in/352x330/v2/https://resizing.flixster.com/9LhBaOHVitgTOrsL8uskWHd61bo=/ems.cHJkLWVtcy1hc3NldHMvbW92aWVzL2UwOWI0N2IzLThkNjctNDAxMC1iMzhkLWE1MzgyZGNjOWYyNS5qcGc="
-  }
-  ];
+  const sample = 
 
   await Movie.insertMany(sample);
-  console.log("Cleared local data and seeded", sample.length, "movies");
+  console.log("Successfully added ", sample.length, " movies.");
   process.exit(0);
 }
 
@@ -67,21 +57,44 @@ async function updateAllMultimoviesDomains() {
   }
 }
 
-async function expireNotifEarlyDeletion() {
+async function resetNotificationTTLIndex() {
   try {
-    await connectMongo();
-    const result = Movie.notifications.getIndexes("notifications");
-    console.log("Current indexes on notifications collection:", result);
-    console.log("Waiting for expired notifications to be automatically deleted...");
+    // 1. Ensure the database connection is open
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database not connected. Connect mongoose before running this.');
+    }
+
+    const collection = mongoose.connection.collection('notifications');
+
+    // 2. Fetch all active indexes on the collection
+    const indexes = await collection.indexes();
+    
+    // 3. Look for any existing index on the 'createdAt' field
+    const ttlIndex = indexes.find(idx => idx.key && idx.key.createdAt !== undefined);
+
+    if (ttlIndex) {
+      console.log(`Found existing TTL index: "${ttlIndex.name}". Dropping it now...`);
+      // Drop the index by its dynamic name
+      await collection.dropIndex(ttlIndex.name);
+      console.log('Old TTL index successfully dropped.');
+    } else {
+      console.log('No existing TTL index found on "createdAt".');
+    }
+
+    // 4. Force Mongoose to rebuild the updated index from the schema
+    console.log('Building fresh 24-hour TTL index...');
+    await Notification.cleanIndexes(); // Clears Mongoose cache
+    await Notification.init();        // Triggers fresh index creation
+    
+    console.log('✅ Notification TTL index reset complete!');
   } catch (error) {
-    console.error("Failed to delete expired notifications:", error);
-    process.exit(1);
+    console.error('❌ Error resetting Notification TTL index:', error);
   }
 }
 
 
 // Execute the single document update
-expireNotifEarlyDeletion().catch((err) => {
+run().catch((err) => {
   console.error(err);
   process.exit(1);
 });

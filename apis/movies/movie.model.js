@@ -12,6 +12,14 @@ const MovieSchema = new mongoose.Schema({
     of: String,
     default: {}
   },
+  SubGenere: {
+    type: [String],
+    default: []
+  },
+  Wood: {
+    type: [String],
+    default: []
+  },
   bannerUrl: { type: String }
 }, { timestamps: true });
 
