@@ -1,14 +1,29 @@
 <section>
   <h2>Change Domain for Multimovies</h2>
-  <form action="/admin/change-domain-multimovies?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post">
+  <form
+    action="/admin/change-domain-multimovies?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>"
+    method="post"
+  >
     <input type="hidden" name="accessToken" value="<%= accessToken %>" />
     <input type="hidden" name="adminPass" value="<%= adminPass %>" />
 
     <label for="title">Old Domain</label>
-    <input id="title" name="old_domain" type="text" required />
+    <input
+      id="title"
+      name="old_domain"
+      type="text"
+      placeholder="ex- .homes"
+      required
+    />
 
     <label for="release">New Domain</label>
-    <input id="release" name="new_domain" type="text" required />
+    <input
+      id="release"
+      name="new_domain"
+      type="text"
+      placeholder="ex- .badia"
+      required
+    />
 
     <button type="submit">Update Domain</button>
   </form>

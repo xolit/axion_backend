@@ -43,12 +43,14 @@
     <div class="message error"><%= error %></div>
   <% } %>
 
+  <!-- Movie Requests Section -->
+  <%- include('./admin/movie-requests') %>
+
   <!-- Movies Management Section -->
   <h2>Movie Management</h2>
   <%- include('./admin/search-movie') %>
-  <%- include('./admin/add-movie') %>
   <%- include('./admin/existing-movies') %>
-  <%- include('./admin/movie-requests') %>
+  <%- include('./admin/add-movie') %>
 
   <!-- Notifications Management Section -->
   <h2>Notification Management</h2>

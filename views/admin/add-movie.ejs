@@ -1,29 +1,67 @@
 <section>
   <h2>Add a New Movie</h2>
-  <form action="/admin/movie/add?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>" method="post">
+  <form
+    action="/admin/movie/add?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>"
+    method="post"
+  >
     <input type="hidden" name="accessToken" value="<%= accessToken %>" />
     <input type="hidden" name="adminPass" value="<%= adminPass %>" />
 
     <label for="title">Title</label>
-    <input id="title" name="title" type="text" required />
+    <input
+      id="title"
+      name="title"
+      type="text"
+      placeholder="Enter movie title ex- Avengers"
+      required
+    />
 
     <label for="release">Release</label>
-    <input id="release" name="release" type="text" />
+    <input
+      id="release"
+      name="release"
+      type="text"
+      placeholder="Enter release date ex- 2026"
+    />
 
     <label for="Type">Genres / Type (comma separated)</label>
-    <input id="Type" name="Type" type="text" placeholder="Action, Comedy, Drama" />
+    <input
+      id="Type"
+      name="Type"
+      type="text"
+      placeholder="Action, Comedy, Drama"
+    />
 
     <label for="SubGenere">SubGenre (comma separated)</label>
-    <input id="SubGenere" name="SubGenere" type="text" placeholder="Movie, TvShow" />
+    <input
+      id="SubGenere"
+      name="SubGenere"
+      type="text"
+      placeholder="Movie, TvShow"
+    />
 
     <label for="Wood">Wood (comma separated)</label>
-    <input id="Wood" name="Wood" type="text" placeholder="Bollywood, Hollywood" />
+    <input
+      id="Wood"
+      name="Wood"
+      type="text"
+      placeholder="Bollywood, Hollywood"
+    />
 
     <label for="Source">Sources (paste URLs or use key=value format)</label>
-    <textarea id="Source" name="Source" placeholder="https://multimovies.com/movie/123&#10;https://onemovies.io/watch/456&#10;or&#10;Multimovies=https://multimovies.com/movie/123&#10;OneMovies=https://onemovies.io/watch/456"></textarea>
+    <textarea
+      id="Source"
+      name="Source"
+      placeholder="https://multimovies.com/movie/123&#10;https://onemovies.io/watch/456&#10;or&#10;Multimovies=https://multimovies.com/movie/123&#10;OneMovies=https://onemovies.io/watch/456"
+    ></textarea>
 
     <label for="bannerUrl">Banner URL</label>
-    <input id="bannerUrl" name="bannerUrl" type="text" />
+    <input
+      id="bannerUrl"
+      name="bannerUrl"
+      type="text"
+      placeholder="banner image URL"
+    />
 
     <button type="submit">Add Movie</button>
   </form>
