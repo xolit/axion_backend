@@ -167,7 +167,11 @@ router.post("/movie/add", ensureAdmin, async (req, res, next) => {
         .replace(/[^\w\s-]/g, "") // remove special chars
         .replace(/\s+/g, "-"); // spaces -> hyphens
 
-      sources.Multimovies = `https://multimovies.makeup/movies/${slug}/`;
+      if (req.body.subGenere == "Movie") {
+        sources.Multimovies = `https://multimovies.makeup/movies/${slug}/`;
+      } else if (req.body.subGenere == "TvShow") {
+        sources.Multimovies = `https://multimovies.makeup/tvshows/${slug}/`;
+      }
     }
 
     // Check if movie already exists
