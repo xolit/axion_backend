@@ -3,6 +3,7 @@
   <form
     action="/admin/movie/add?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>"
     method="post"
+    id="addMovieForm"
   >
     <input type="hidden" name="accessToken" value="<%= accessToken %>" />
     <input type="hidden" name="adminPass" value="<%= adminPass %>" />
@@ -32,7 +33,7 @@
       placeholder="Action, Comedy, Drama"
     />
 
-    <label for="SubGenere">SubGenre (comma separated)</label>
+    <label for="SubGenere">SubGenre</label>
     <input
       id="SubGenere"
       name="SubGenere"
@@ -40,7 +41,7 @@
       placeholder="Movie, TvShow"
     />
 
-    <label for="Wood">Wood (comma separated)</label>
+    <label for="Wood">Wood</label>
     <input
       id="Wood"
       name="Wood"
@@ -48,12 +49,8 @@
       placeholder="Bollywood, Hollywood"
     />
 
-    <label for="Source">Multimovies source available?</label>
-    <input
-      type="checkbox"
-      id="SourceForMultimoviesAvailable"
-      name="SourceForMultimoviesAvailable"
-    />
+    <label for="MultimoviesDomain">Multimovies domain? ex- .homes</label>
+    <input type="text" id="MultimoviesDomain" name="MultimoviesDomain" />
 
     <label for="Source">Sources (paste URLs or use key=value format)</label>
     <textarea
@@ -73,3 +70,24 @@
     <button type="submit">Add Movie</button>
   </form>
 </section>
+
+<script>
+  window.onload = function () {
+    const savedDomain = localStorage.getItem("MultimoviesDomainInput");
+    if (savedDomain) {
+      document.getElementById("MultimoviesDomain").value = savedDomain;
+    }
+  };
+  const addMovieForm = document.getElementById("addMovieForm");
+  const MultimoviesDomainInput = document.getElementById("MultimoviesDomain");
+  addMovieForm.addEventListener("onsubmit", (e) => {
+    e.preventDefault();
+
+    if (!localStorage.getItem("MultimoviesDomainInput")) {
+      localStorage.setItem(
+        "MultimoviesDomainInput",
+        MultimoviesDomainInput.value,
+      );
+    }
+  });
+</script>

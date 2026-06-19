@@ -95,6 +95,36 @@ function parseSource(raw) {
   return result;
 }
 
+function normalizeMultimoviesDomain(rawValue) {
+  const trimmed = String(rawValue || "").trim();
+  if (!trimmed) return "";
+
+  let cleaned = trimmed;
+  if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
+    try {
+      const url = new URL(cleaned);
+      cleaned = url.host;
+    } catch (_err) {
+      cleaned = cleaned.replace(/https?:\/\//i, "").split("/")[0];
+    }
+  }
+
+  cleaned = cleaned.toLowerCase();
+  if (cleaned.startsWith("www.")) {
+    cleaned = cleaned.slice(4);
+  }
+
+  if (cleaned.startsWith("multimovies.")) {
+    cleaned = cleaned.slice("multimovies".length);
+  }
+
+  if (cleaned && !cleaned.startsWith(".")) {
+    cleaned = "." + cleaned;
+  }
+
+  return cleaned;
+}
+
 function ensureAdmin(req, res, next) {
   const { adminPass } = getAdminCredentials(req);
   const expectedPass = process.env.ADMIN_PASS;
@@ -149,6 +179,12 @@ router.get("/", ensureAdmin, async (req, res, next) => {
 router.post("/movie/add", ensureAdmin, async (req, res, next) => {
   try {
     const title = (req.body.title || "").trim();
+    const rawMultimoviesDomain =
+      req.body.MultimoviesDomain || req.body.multimoviesDomain || "";
+    const multimoviesDomain = normalizeMultimoviesDomain(rawMultimoviesDomain);
+    const rawSubGenere = req.body.SubGenere || req.body.subGenere || "";
+    const subGenereValues = parseType(rawSubGenere);
+    const primarySubGenere = (subGenereValues[0] || "").toLowerCase();
 
     if (!title) {
       return res.redirect(
@@ -167,10 +203,19 @@ router.post("/movie/add", ensureAdmin, async (req, res, next) => {
         .replace(/[^\w\s-]/g, "") // remove special chars
         .replace(/\s+/g, "-"); // spaces -> hyphens
 
-      if (req.body.subGenere == "Movie") {
-        sources.Multimovies = `https://multimovies.makeup/movies/${slug}/`;
-      } else if (req.body.subGenere == "TvShow") {
-        sources.Multimovies = `https://multimovies.makeup/tvshows/${slug}/`;
+      if (primarySubGenere === "movie" || primarySubGenere === "movies") {
+        sources.Multimovies = `https://multimovies${multimoviesDomain}/movies/${slug}/`;
+      } else if (
+        primarySubGenere === "tvshow" ||
+        primarySubGenere === "tvshows" ||
+        primarySubGenere === "tv show" ||
+        primarySubGenere === "tv shows" ||
+        primarySubGenere === "TvShow" ||
+        primarySubGenere === "TvShows" ||
+        primarySubGenere === "Tv Show" ||
+        primarySubGenere === "Tv Shows"
+      ) {
+        sources.Multimovies = `https://multimovies${multimoviesDomain}/tvshows/${slug}/`;
       }
     }
 
