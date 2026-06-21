@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const Movie = require("../movies/movie.model");
 const MovieRequest = require("../movies/movieRequest.model");
@@ -140,6 +141,49 @@ function ensureAdmin(req, res, next) {
   next();
 }
 
+async function getMoviesData(searchTitle, year, subGenre) {
+  const omdbKey = process.env.OMDB_KEY;
+
+  let omdbType = "";
+
+  if (subGenre && subGenre.toLowerCase().includes("tv")) {
+    omdbType = "series";
+  } else {
+    omdbType = "movie";
+  }
+
+  const url =
+    `https://www.omdbapi.com/?t=${encodeURIComponent(searchTitle)}` +
+    `&apikey=${encodeURIComponent(omdbKey)}` +
+    (year ? `&y=${encodeURIComponent(year)}` : "") +
+    `&type=${omdbType}`;
+
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if (data.Response === "False") {
+    throw new Error(data.Error);
+  }
+
+  let releaseYear = data.Year || "";
+
+  if (releaseYear.includes("–")) {
+    releaseYear = releaseYear.split("–").pop().trim();
+  } else if (releaseYear.includes("-")) {
+    releaseYear = releaseYear.split("-").pop().trim();
+  }
+
+  return {
+    release: releaseYear,
+    bannerUrl: data.Poster && data.Poster !== "N/A" ? data.Poster : "",
+
+    Type:
+      data.Genre && data.Genre !== "N/A"
+        ? data.Genre.split(",").map((g) => g.trim())
+        : [],
+  };
+}
+
 router.get("/", ensureAdmin, async (req, res, next) => {
   try {
     const { accessToken, adminPass } = getAdminCredentials(req);
@@ -236,14 +280,26 @@ router.post("/movie/add", ensureAdmin, async (req, res, next) => {
       );
     }
 
+    const moviesData = await getMoviesData(
+      title,
+      req.body.release,
+      req.body.SubGenere,
+    );
+
     const movie = new Movie({
       title,
-      release: (req.body.release || "").trim(),
-      Type: parseType(req.body.Type),
+
+      release: moviesData.release || req.body.release,
+
+      Type: moviesData.Type || [],
+
       Source: sources,
+
       SubGenere: parseType(req.body.SubGenere),
+
       Wood: parseType(req.body.Wood),
-      bannerUrl: (req.body.bannerUrl || "").trim(),
+
+      bannerUrl: moviesData.bannerUrl || "",
     });
 
     await movie.save();

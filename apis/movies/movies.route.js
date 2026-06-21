@@ -34,7 +34,7 @@ router.get(
   async (req, res, next) => {
     try {
       const page = Math.max(parseInt(req.query.page || "1", 10), 1);
-      const limit = 10;
+      const limit = 50;
       const skip = (page - 1) * limit;
       const movies = await Movie.find()
         .select(payloadForData)
@@ -44,7 +44,8 @@ router.get(
         .lean();
       const total = await Movie.countDocuments();
       const nextPage = skip + movies.length < total ? page + 1 : null;
-      return res.json({ page, nextPage, movies });
+      const moviesCount = movies.length;
+      return res.json({ page, nextPage, movies, moviesCount });
     } catch (err) {
       next(err);
     }

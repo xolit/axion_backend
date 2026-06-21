@@ -7,9 +7,9 @@ const limiter = rateLimit({
 });
 
 const limiterForReq = rateLimit({
-  windowMs: 2 * 60 * 1000, // 2 minutes
-  max: 3,
-  message: "Too many requests from this IP, please try again after 2 minutes",
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 1,
+  message: "Too many requests from this IP, please try again after 1 minute",
 });
 
 module.exports = {
