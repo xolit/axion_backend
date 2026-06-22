@@ -448,5 +448,55 @@ router.post(
     }
   },
 );
+router.post("/change-domain-cinehd", ensureAdmin, async (req, res, next) => {
+  try {
+    const old_domain = req.body.old_domain;
+    const new_domain = req.body.new_domain;
+
+    if (!old_domain || !new_domain) {
+      return res.redirect(
+        buildAdminRedirect(req, {
+          error: "Both old and new domain are required.",
+        }),
+      );
+    }
+
+    const cineHdKeys = ["CineHD", "CineHd"];
+    const regex = `^https://cinehd\\${old_domain}`;
+    const findPattern = `https://cinehd${old_domain}`;
+    const replacementPattern = `https://cinehd${new_domain}`;
+
+    let totalModified = 0;
+
+    for (const key of cineHdKeys) {
+      const filter = { [`Source.${key}`]: { $regex: regex } };
+      const updatePipeline = [
+        {
+          $set: {
+            [`Source.${key}`]: {
+              $replaceOne: {
+                input: `$Source.${key}`,
+                find: findPattern,
+                replacement: replacementPattern,
+              },
+            },
+          },
+        },
+      ];
+
+      const result = await Movie.updateMany(filter, updatePipeline);
+      totalModified += result.modifiedCount;
+    }
+
+    return res.redirect(
+      buildAdminRedirect(req, {
+        success: `${totalModified} Docs Updated from ${old_domain} to ${new_domain}.`,
+      }),
+    );
+  } catch (error) {
+    console.error("Domain update failed:", error);
+    return res.status(500).json({ error: "Domain update failed." });
+  }
+});
 
 module.exports = router;

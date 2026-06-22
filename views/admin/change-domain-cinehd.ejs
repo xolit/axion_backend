@@ -1,0 +1,30 @@
+<section>
+  <h2>Change Domain for CineHD</h2>
+  <form
+    action="/admin/change-domain-cinehd?accessToken=<%= encodeURIComponent(accessToken) %>&adminPass=<%= encodeURIComponent(adminPass) %>"
+    method="post"
+  >
+    <input type="hidden" name="accessToken" value="<%= accessToken %>" />
+    <input type="hidden" name="adminPass" value="<%= adminPass %>" />
+
+    <label for="title">Old Domain</label>
+    <input
+      id="title"
+      name="old_domain"
+      type="text"
+      placeholder="ex- .app"
+      required
+    />
+
+    <label for="release">New Domain</label>
+    <input
+      id="release"
+      name="new_domain"
+      type="text"
+      placeholder="ex- .xyz"
+      required
+    />
+
+    <button type="submit">Update Domain</button>
+  </form>
+</section>

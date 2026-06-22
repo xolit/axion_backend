@@ -2,6 +2,7 @@ require("dotenv").config();
 const connectMongo = require("../db/mongo");
 const Movie = require("../apis/movies/movie.model");
 const { ObjectId } = require("mongodb");
+const redisClient = require("../db/redisClient");
 
 async function run() {
   await connectMongo();
@@ -52,6 +53,24 @@ async function updateAllMultimoviesDomains() {
   } catch (error) {
     console.error("Global update failed:", error);
     process.exit(1);
+  }
+}
+
+async function clearCache() {
+  try {
+    if (!redisClient.isOpen) {
+      await redisClient.connect();
+    }
+
+    console.log("Clearing Redis cache...");
+    await redisClient.flushAll();
+    console.log("Redis cache cleared successfully.");
+  } catch (error) {
+    console.error("Failed to clear Redis cache:", error);
+  } finally {
+    if (redisClient.isOpen) {
+      await redisClient.disconnect();
+    }
   }
 }
 
