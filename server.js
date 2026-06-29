@@ -4,7 +4,7 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const morgan = require("morgan");
-const { limiter, limiterForReq } = require("./service/limiter");
+const { limiter, limiterForReq, limiterForAuth } = require("./service/limiter");
 
 const connectMongo = require("./db/mongo");
 const redisClient = require("./db/redisClient");
@@ -13,6 +13,7 @@ const moviesRouter = require("./apis/movies/movies.route");
 const requestsRouter = require("./apis/requests/requests.route");
 const notifsRouter = require("./apis/notifs/notif.route");
 const adminRouter = require("./apis/admin/admin.route");
+const userRouter = require("./apis/auth/user.routes");
 const authMiddleware = require("./middlewares/auth");
 
 const app = express();
@@ -42,6 +43,7 @@ app.use(authMiddleware);
 app.use("/movie", limiter, moviesRouter);
 app.use("/home", limiter, moviesRouter);
 app.use("/request", limiterForReq, requestsRouter);
+app.use("/auth", limiterForAuth, userRouter);
 // in notifs route added limiter in specific route to avoid rate limiting for admin access, but still protect public access
 app.use("/notifs", limiter, notifsRouter);
 app.use("/admin", adminRouter);
