@@ -15,7 +15,7 @@ module.exports = async (req, res, next) => {
       req.headers["x-access-token"] ||
       req.query.accessToken;
 
-    const userId = req.body?.userId;
+    const userId = req.query.userId;
 
     if (!expected) {
       console.warn("ACCESS_TOKEN not set in environment");
