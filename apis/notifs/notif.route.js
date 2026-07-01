@@ -31,15 +31,9 @@ function ensureAdmin(req, res, next) {
 }
 
 // GET /notifs - Get all notifications (for frontend)
+// Required: x-access-token header, userId query parameter
 router.get("/", limiter, async (req, res, next) => {
   try {
-    const auth_query = req.query.accessToken;
-    const expectedToken = process.env.ACCESS_TOKEN;
-
-    if (expectedToken && auth_query !== expectedToken) {
-      return res.status(401).json({ error: "Unauthorized access" });
-    }
-
     const notifications = await Notification.find()
       .sort({ createdAt: -1 })
       .lean();
