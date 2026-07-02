@@ -126,6 +126,36 @@ function normalizeMultimoviesDomain(rawValue) {
   return cleaned;
 }
 
+function normalizeCineHdDomain(rawValue) {
+  const trimmed = String(rawValue || "").trim();
+  if (!trimmed) return "";
+
+  let cleaned = trimmed;
+  if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
+    try {
+      const url = new URL(cleaned);
+      cleaned = url.host;
+    } catch (_err) {
+      cleaned = cleaned.replace(/https?:\/\//i, "").split("/")[0];
+    }
+  }
+
+  cleaned = cleaned.toLowerCase();
+  if (cleaned.startsWith("www.")) {
+    cleaned = cleaned.slice(4);
+  }
+
+  if (cleaned.startsWith("cinehd.")) {
+    cleaned = cleaned.slice("cinehd".length);
+  }
+
+  if (cleaned && !cleaned.startsWith(".")) {
+    cleaned = "." + cleaned;
+  }
+
+  return cleaned;
+}
+
 function ensureAdmin(req, res, next) {
   const { adminPass } = getAdminCredentials(req);
   const expectedPass = process.env.ADMIN_PASS;
@@ -226,6 +256,9 @@ router.post("/movie/add", ensureAdmin, async (req, res, next) => {
     const rawMultimoviesDomain =
       req.body.MultimoviesDomain || req.body.multimoviesDomain || "";
     const multimoviesDomain = normalizeMultimoviesDomain(rawMultimoviesDomain);
+    const rawCinehdDomain =
+      req.body.CineHDDomain || req.body.cineHDDomain || "";
+    const cinehdDomain = normalizeCineHdDomain(rawCinehdDomain);
     const rawSubGenere = req.body.SubGenere || req.body.subGenere || "";
     const subGenereValues = parseType(rawSubGenere);
     const primarySubGenere = (subGenereValues[0] || "").toLowerCase();
@@ -261,6 +294,16 @@ router.post("/movie/add", ensureAdmin, async (req, res, next) => {
       ) {
         sources.Multimovies = `https://multimovies${multimoviesDomain}/tvshows/${slug}/`;
       }
+    }
+
+    if (!sources.CineHD && cinehdDomain) {
+      const query = String(title)
+        .trim()
+        .toLowerCase()
+        .replace(/[^\w\s]/g, "")
+        .replace(/\s+/g, "+");
+
+      sources.CineHD = `https://cinehd${cinehdDomain}/search?q=${query}`;
     }
 
     // Check if movie already exists

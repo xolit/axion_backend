@@ -1,4 +1,9 @@
+const crypto = require("crypto");
 const User = require("../apis/auth/user.model");
+
+function getHashedAccessToken(secret) {
+  return crypto.createHash("sha256").update(secret).digest("hex");
+}
 
 module.exports = async (req, res, next) => {
   try {
@@ -25,7 +30,9 @@ module.exports = async (req, res, next) => {
       });
     }
 
-    if (!token || token !== expected) {
+    const hashedExpected = getHashedAccessToken(expected);
+
+    if (!token || (token !== expected && token !== hashedExpected)) {
       return res.status(401).json({
         success: false,
         error: "Unauthorized",

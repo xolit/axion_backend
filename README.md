@@ -34,16 +34,16 @@ APIs:
 1. Request OTP
    - Endpoint: `POST /auth/account`
    - Body for new signup: `{ "email": "user@example.com", "username": "john_doe" }`
-   - Body for existing login: `{ "email": "user@example.com" }`
-   - Behavior: creates a user if it does not exist, stores the email and optional username, generates a 6-digit OTP, and sends it to the email.
+   - Body for existing login: `{ "email": "user@example.com", "username": "john_doe" }`
+   - Behavior: requires both email and username to match an existing user, or creates a new user when the email is not found.
    - Response: `{ success: true, message: "OTP sent successfully. Check your email." }`
    - Note: do not expect `userId` in this response.
 
 2. Verify OTP
    - Endpoint: `POST /auth/account`
-   - Body: `{ "email": "user@example.com", "otp": "123456" }`
-   - Behavior: verifies the OTP, clears any existing OTPs, and returns the userId.
-   - Response: `{ success: true, message: "OTP verified successfully.", userId }`
+   - Body: `{ "email": "user@example.com", "username": "john_doe", "otp": "123456" }`
+   - Behavior: requires both email and username to match the stored user and returns the userId plus a hashed accessToken after successful OTP verification.
+   - Response: `{ success: true, message: "OTP verified successfully.", accessToken: "<HASHED_ACCESS_TOKEN>", user: { userId, Username, Subscription } }`
 
 3. Delete user
    - Endpoint: `DELETE /auth/user`

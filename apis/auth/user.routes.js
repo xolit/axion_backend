@@ -1,9 +1,16 @@
+const crypto = require("crypto");
 const express = require("express");
 const router = express.Router();
 
 const Otp = require("./otp.model");
 const User = require("./user.model");
 const sendEmail = require("../../service/send.email.otp");
+
+function getHashedAccessToken() {
+  const secret = process.env.ACCESS_TOKEN;
+  if (!secret) return null;
+  return crypto.createHash("sha256").update(secret).digest("hex");
+}
 
 // POST /auth/account
 router.post("/account", async (req, res) => {
@@ -25,7 +32,26 @@ router.post("/account", async (req, res) => {
     let user = await User.findOne({ Email: normalizedEmail });
 
     if (!otp) {
-      if (!user) {
+      if (user) {
+        if (!normalizedUsername) {
+          return res.status(400).json({
+            success: false,
+            message: "Username is required for existing users.",
+          });
+        }
+
+        if (user.Username && user.Username !== normalizedUsername) {
+          return res.status(401).json({
+            success: false,
+            message: "Email and username do not match any existing user.",
+          });
+        }
+
+        if (!user.Username) {
+          user.Username = normalizedUsername;
+          await user.save();
+        }
+      } else {
         if (!normalizedUsername) {
           return res.status(400).json({
             success: false,
@@ -37,9 +63,6 @@ router.post("/account", async (req, res) => {
           Email: normalizedEmail,
           Username: normalizedUsername,
         });
-      } else if (normalizedUsername && !user.Username) {
-        user.Username = normalizedUsername;
-        await user.save();
       }
 
       const verificationCode = Math.floor(100000 + Math.random() * 900000);
@@ -152,22 +175,45 @@ router.post("/account", async (req, res) => {
       });
     }
 
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (!normalizedUsername) {
+      return res.status(400).json({
+        success: false,
+        message: "Username is required for OTP verification.",
+      });
+    }
+
+    if (user.Username && user.Username !== normalizedUsername) {
+      return res.status(401).json({
+        success: false,
+        message: "Email and username do not match any existing user.",
+      });
+    }
+
     await Otp.deleteMany({ Email: normalizedEmail });
 
-    if (!user) {
-      user = await User.create({
-        Email: normalizedEmail,
-        Username: normalizedUsername,
-      });
-    } else if (normalizedUsername && !user.Username) {
+    if (!user.Username) {
       user.Username = normalizedUsername;
       await user.save();
     }
 
+    const accessToken = getHashedAccessToken();
+
     return res.status(200).json({
       success: true,
       message: "OTP verified successfully.",
-      userId: user._id,
+      user: {
+        Username: user.Username,
+        Subscription: user.Subscription,
+        userId: user._id,
+      },
+      accessToken: accessToken,
     });
   } catch (err) {
     console.error(err);
@@ -196,7 +242,9 @@ router.delete("/user", async (req, res) => {
       });
     }
 
-    if (!token || token !== expected) {
+    const hashedExpected = getHashedAccessToken();
+
+    if (!token || (token !== expected && token !== hashedExpected)) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized.",
