@@ -211,8 +211,8 @@ router.post("/account", async (req, res) => {
       user: {
         Username: user.Username,
         Subscription: user.Subscription,
-        userId: user._id,
       },
+      userId: user._id,
       accessToken: accessToken,
     });
   } catch (err) {
