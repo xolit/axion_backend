@@ -118,12 +118,13 @@ async function resetNotificationTTLIndex() {
 
 async function addFlixeoSourceInExistingDocs() {
   try {
+    await connectMongo();
     const movies = await Movie.find({
-      "Source.Flixeo": { $exists: false },
+      "Source.Cinevaro": { $exists: false },
     }).select("_id title");
 
     if (!movies.length) {
-      console.log("All movies already have a Flixeo source.");
+      console.log("All movies already have a Cinevaro source.");
       return;
     }
 
@@ -141,7 +142,7 @@ async function addFlixeoSourceInExistingDocs() {
           filter: { _id: movie._id },
           update: {
             $set: {
-              "Source.Flixeo": `https://flixeo.tv/search?q=${slug}`,
+              "Source.Cinevaro": `https://Cinevaro.app/#/browse/${slug}`,
             },
           },
         },
