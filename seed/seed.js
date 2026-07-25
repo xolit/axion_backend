@@ -5,11 +5,12 @@ const { ObjectId } = require("mongodb");
 const redisClient = require("../db/redisClient");
 
 async function run() {
-  await connectMongo();
-  // await Movie.deleteMany({});
+  // await connectMongo();
+  // // await Movie.deleteMany({});
 
-  const sample = await Movie.insertMany(sample);
-  console.log("Successfully added ", sample.length, " movies.");
+  // const sample = await Movie.insertMany(sample);
+  // console.log("Successfully added ", sample.length, " movies.");
+  console.log("fresh....");
   process.exit(0);
 }
 
@@ -115,8 +116,50 @@ async function resetNotificationTTLIndex() {
   }
 }
 
+async function addFlixeoSourceInExistingDocs() {
+  try {
+    const movies = await Movie.find({
+      "Source.Flixeo": { $exists: false },
+    }).select("_id title");
+
+    if (!movies.length) {
+      console.log("All movies already have a Flixeo source.");
+      return;
+    }
+
+    const operations = movies.map((movie) => {
+      const slug = movie.title
+        .toLowerCase()
+        .trim()
+        .replace(/&/g, "and")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+
+      return {
+        updateOne: {
+          filter: { _id: movie._id },
+          update: {
+            $set: {
+              "Source.Flixeo": `https://flixeo.tv/search?q=${slug}`,
+            },
+          },
+        },
+      };
+    });
+
+    const result = await Movie.bulkWrite(operations);
+
+    console.log(
+      `Matched: ${result.matchedCount}, Modified: ${result.modifiedCount}`,
+    );
+  } catch (err) {
+    console.error("Error adding Flixeo sources:", err);
+  }
+}
+
 // Execute the single document update
-run().catch((err) => {
+addFlixeoSourceInExistingDocs().catch((err) => {
   console.error(err);
   process.exit(1);
 });

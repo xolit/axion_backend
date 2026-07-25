@@ -41,11 +41,17 @@
       placeholder="Bollywood, Hollywood"
     />
 
-    <label for="MultimoviesDomain">Multimovies domain? ex- .homes</label>
+    <label for="MultimoviesDomain">Multimovies domain? ex- .study</label>
     <input type="text" id="MultimoviesDomain" name="MultimoviesDomain" />
 
-    <label for="CineHDDomain">CineHD domain? ex- .homes</label>
+    <label for="CineHDDomain">CineHD domain? ex- .app</label>
     <input type="text" id="CineHDDomain" name="CineHDDomain" />
+
+    <label for="CinevaroDomain">Cinevaro domain? ex- .app</label>
+    <input type="text" id="CinevaroDomain" name="CinevaroDomain" />
+
+    <label for="FlixeoDomain">Flixeo domain? ex- .tv</label>
+    <input type="text" id="FlixeoDomain" name="FlixeoDomain" />
 
     <label for="Source">Sources (paste URLs or use key=value format)</label>
     <textarea
@@ -59,33 +65,32 @@
 </section>
 
 <script>
-  const savedDomainForMultiMovies = localStorage.getItem(
-    "MultimoviesDomainInput",
-  );
-  const savedDomainForCineHD = localStorage.getItem("CineHDDomainInput");
-  if (savedDomainForMultiMovies) {
-    document.getElementById("MultimoviesDomain").value =
-      savedDomainForMultiMovies;
-  }
-  if (savedDomainForCineHD) {
-    document.getElementById("CineHDDomain").value = savedDomainForCineHD;
-  }
+  const fields = [
+    "MultimoviesDomain",
+    "CineHDDomain",
+    "CinevaroDomain",
+    "FlixeoDomain",
+    "SubGenere",
+    "Wood",
+  ];
 
-  const addMovieForm = document.getElementById("addMovieForm");
-  const MultimoviesDomainInput = document.getElementById("MultimoviesDomain");
-  addMovieForm.addEventListener("onsubmit", (e) => {
-    e.preventDefault();
-
-    if (!localStorage.getItem("MultimoviesDomainInput")) {
-      localStorage.setItem(
-        "MultimoviesDomainInput",
-        MultimoviesDomainInput.value,
-      );
-    } else if (!localStorage.getItem("CineHDDomainInput")) {
-      localStorage.setItem(
-        "CineHDDomainInput",
-        document.getElementById("CineHDDomain").value,
-      );
+  // Restore saved values
+  fields.forEach((field) => {
+    const savedValue = localStorage.getItem(field);
+    if (savedValue) {
+      document.getElementById(field).value = savedValue;
     }
   });
+
+  // Save values on form submit
+  document
+    .getElementById("addMovieForm")
+    .addEventListener("submit", function () {
+      fields.forEach((field) => {
+        localStorage.setItem(
+          field,
+          document.getElementById(field).value.trim(),
+        );
+      });
+    });
 </script>

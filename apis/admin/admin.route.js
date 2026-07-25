@@ -252,15 +252,14 @@ router.get("/", ensureAdmin, async (req, res, next) => {
 
 router.post("/movie/add", ensureAdmin, async (req, res, next) => {
   try {
-    const title = (req.body.title || "").trim();
-    const rawMultimoviesDomain =
-      req.body.MultimoviesDomain || req.body.multimoviesDomain || "";
-    const multimoviesDomain = normalizeMultimoviesDomain(rawMultimoviesDomain);
-    const rawCinehdDomain =
-      req.body.CineHDDomain || req.body.cineHDDomain || "";
-    const cinehdDomain = normalizeCineHdDomain(rawCinehdDomain);
-    const rawSubGenere = req.body.SubGenere || req.body.subGenere || "";
-    const subGenereValues = parseType(rawSubGenere);
+    const title = req.body.title.trim();
+    const multimoviesDomain = normalizeMultimoviesDomain(
+      req.body.MultimoviesDomain,
+    );
+    const cinehdDomain = normalizeCineHdDomain(req.body.CineHDDomain);
+    const flixeoDomain = normalizeCineHdDomain(req.body.FlixeoDomain);
+    const cinevaroDomain = normalizeCineHdDomain(req.body.CinevaroDomain);
+    const subGenereValues = parseType(req.body.SubGenere);
     const primarySubGenere = (subGenereValues[0] || "").toLowerCase();
 
     if (!title) {
@@ -271,6 +270,11 @@ router.post("/movie/add", ensureAdmin, async (req, res, next) => {
 
     // Parse sources
     const sources = parseSource(req.body.Source);
+    const updated_Title = title
+      .trim()
+      .toLowerCase()
+      .replace(/[^\w\s]/g, "")
+      .replace(/\s+/g, "+");
 
     // Auto-generate Multimovies URL if missing
     if (!sources.Multimovies) {
@@ -304,6 +308,14 @@ router.post("/movie/add", ensureAdmin, async (req, res, next) => {
         .replace(/\s+/g, "+");
 
       sources.CineHD = `https://cinehd${cinehdDomain}/search?q=${query}`;
+    }
+
+    if (!sources.Cinevaro && cinevaroDomain) {
+      sources.Cinevaro = `https://cinevaro${cinevaroDomain}/#/browse/${updated_Title}`;
+    }
+
+    if (!sources.Flixeo && flixeoDomain) {
+      sources.Flixeo = `https://flixeo${flixeoDomain}/search?q=${title}`;
     }
 
     // Check if movie already exists
@@ -491,6 +503,7 @@ router.post(
     }
   },
 );
+
 router.post("/change-domain-cinehd", ensureAdmin, async (req, res, next) => {
   try {
     const old_domain = req.body.old_domain;
@@ -541,5 +554,112 @@ router.post("/change-domain-cinehd", ensureAdmin, async (req, res, next) => {
     return res.status(500).json({ error: "Domain update failed." });
   }
 });
+
+router.post("/change-domain-cinevaro", ensureAdmin, async (req, res, next) => {
+  try {
+    const old_domain = req.body.old_domain;
+    const new_domain = req.body.new_domain;
+
+    if (!old_domain || !new_domain) {
+      return res.redirect(
+        buildAdminRedirect(req, {
+          error: "Both old and new domain are required.",
+        }),
+      );
+    }
+
+    const CinevaroKeys = ["Cinevaro", "Cinevaro"];
+    const regex = `^https://cinevaro\\${old_domain}`;
+    const findPattern = `https://cinevaro${old_domain}`;
+    const replacementPattern = `https://cinevaro${new_domain}`;
+
+    let totalModified = 0;
+
+    for (const key of CinevaroKeys) {
+      const filter = { [`Source.${key}`]: { $regex: regex } };
+      const updatePipeline = [
+        {
+          $set: {
+            [`Source.${key}`]: {
+              $replaceOne: {
+                input: `$Source.${key}`,
+                find: findPattern,
+                replacement: replacementPattern,
+              },
+            },
+          },
+        },
+      ];
+
+      const result = await Movie.updateMany(filter, updatePipeline);
+      totalModified += result.modifiedCount;
+    }
+
+    return res.redirect(
+      buildAdminRedirect(req, {
+        success: `${totalModified} Docs Updated from ${old_domain} to ${new_domain}.`,
+      }),
+    );
+  } catch (error) {
+    console.error("Domain update failed:", error);
+    return res.status(500).json({ error: "Domain update failed." });
+  }
+});
+
+router.post("/change-domain-flexio", ensureAdmin, async (req, res, next) => {
+  try {
+    const old_domain = req.body.old_domain;
+    const new_domain = req.body.new_domain;
+
+    if (!old_domain || !new_domain) {
+      return res.redirect(
+        buildAdminRedirect(req, {
+          error: "Both old and new domain are required.",
+        }),
+      );
+    }
+
+    const FlexioKeys = ["Flexio", "Flexio"];
+    const regex = `^https://flexio\\${old_domain}`;
+    const findPattern = `https://flexio${old_domain}`;
+    const replacementPattern = `https://flexio${new_domain}`;
+
+    let totalModified = 0;
+
+    for (const key of FlexioKeys) {
+      const filter = { [`Source.${key}`]: { $regex: regex } };
+      const updatePipeline = [
+        {
+          $set: {
+            [`Source.${key}`]: {
+              $replaceOne: {
+                input: `$Source.${key}`,
+                find: findPattern,
+                replacement: replacementPattern,
+              },
+            },
+          },
+        },
+      ];
+
+      const result = await Movie.updateMany(filter, updatePipeline);
+      totalModified += result.modifiedCount;
+    }
+
+    return res.redirect(
+      buildAdminRedirect(req, {
+        success: `${totalModified} Docs Updated from ${old_domain} to ${new_domain}.`,
+      }),
+    );
+  } catch (error) {
+    console.error("Domain update failed:", error);
+    return res.status(500).json({ error: "Domain update failed." });
+  }
+});
+
+// upcomin feature 1 route any domain updated.
+// router.post("/change-domain", ensureAdmin, async (req, res, next) =>{
+//   const domainToChange = req.body.domainToChange
+// })
 
 module.exports = router;
