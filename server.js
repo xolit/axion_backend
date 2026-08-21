@@ -15,6 +15,7 @@ const notifsRouter = require("./apis/notifs/notif.route");
 const adminRouter = require("./apis/admin/admin.route");
 const userRouter = require("./apis/auth/user.routes");
 const authMiddleware = require("./middlewares/auth");
+const { startAutoSeed } = require("./seed/autoSeed");
 
 const app = express();
 
@@ -74,6 +75,8 @@ async function start() {
 }
 
 start();
+// start auto seeding process
+startAutoSeed();
 
 process.on("SIGINT", async () => {
   console.log("Shutting down");
