@@ -81,7 +81,7 @@ async function getLatestDomains() {
   return domains;
 }
 
-async function getRandomMovie(subGenre) {
+async function getRandomMovie(subGenre, excludedTitles = new Set()) {
   const omdbKey = process.env.OMDB_KEY;
 
   const randomSearch =
@@ -111,8 +111,11 @@ async function getRandomMovie(subGenre) {
     throw new Error("No movies found.");
   }
 
-  // ONLY FIRST RESULT
-  const firstResult = results[0];
+  const availableResults = results.filter(
+    (result) => !excludedTitles.has(String(result.Title || "").toLowerCase()),
+  );
+  const resultPool = availableResults.length ? availableResults : results;
+  const firstResult = resultPool[Math.floor(Math.random() * resultPool.length)];
 
   const detailUrl =
     `https://www.omdbapi.com/?i=${encodeURIComponent(firstResult.imdbID)}` +
@@ -191,21 +194,23 @@ async function sendDataToDB(movieData, domains) {
     CinevaroDomain: domains.CinevaroDomain,
   };
 
-  console.log("\n📦 Request body:");
-  console.log(JSON.stringify(body, null, 2));
-
   try {
-    const response = await fetch(
-      `https://axion-backend-six.vercel.app/admin/movie/add?accessToken=${encodeURIComponent(process.env.ADMIN_ACCESS_TOKEN)}&adminPass=${encodeURIComponent(process.env.ADMIN_PASS)}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-        redirect: "manual",
+    const apiBaseUrl = (
+      process.env.AUTOMATION_API_URL ||
+      process.env.PUBLIC_API_URL ||
+      `http://127.0.0.1:${process.env.PORT || 8080}`
+    ).replace(/\/$/, "");
+    const addMovieUrl = `${apiBaseUrl}/admin/movie/add?adminPass=${encodeURIComponent(process.env.ADMIN_PASS)}`;
+
+    const response = await fetch(addMovieUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify(body),
+      redirect: "manual",
+      signal: AbortSignal.timeout(15000),
+    });
 
     console.log("\n📡 API status:", response.status);
 
@@ -213,13 +218,12 @@ async function sendDataToDB(movieData, domains) {
 
     const responseText = await response.text();
 
-    if (responseText) {
-      console.log("📨 API response:", responseText);
-    }
-
     if (response.status >= 300 && response.status < 400) {
       if (location) {
-        const decodedLocation = decodeURIComponent(location);
+        const decodedLocation = decodeURIComponent(location).replace(
+          /\+/g,
+          " ",
+        );
 
         if (decodedLocation.toLowerCase().includes("already exists")) {
           console.log(`⚠️ "${movieData.title}" already exists in DB.`);
@@ -245,6 +249,8 @@ async function sendDataToDB(movieData, domains) {
           return {
             success: false,
             alreadyExists: false,
+            retryable: false,
+            reason: "movie_api_redirected_to_error",
           };
         }
       }
@@ -252,6 +258,8 @@ async function sendDataToDB(movieData, domains) {
       return {
         success: false,
         alreadyExists: false,
+        retryable: false,
+        reason: "movie_api_unrecognized_redirect",
       };
     }
 
@@ -269,6 +277,8 @@ async function sendDataToDB(movieData, domains) {
     return {
       success: false,
       alreadyExists: false,
+      retryable: response.status >= 500 || response.status === 429,
+      reason: `movie_api_status_${response.status}`,
     };
   } catch (error) {
     console.error("❌ Error adding movie to DB:", error.message);
@@ -276,6 +286,7 @@ async function sendDataToDB(movieData, domains) {
     return {
       success: false,
       alreadyExists: false,
+      retryable: true,
     };
   }
 }
@@ -289,20 +300,26 @@ async function runAutoSeed() {
     const domains = await getLatestDomains();
 
     const MAX_ATTEMPTS = 20;
+    const attemptedTitles = new Set();
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       console.log(`\n🔄 Attempt ${attempt}/${MAX_ATTEMPTS}`);
 
-      const movie = await getRandomMovie();
+      let movie;
+      try {
+        movie = await getRandomMovie(undefined, attemptedTitles);
+      } catch (error) {
+        console.error("❌ OMDb lookup failed:", error.message);
+        continue;
+      }
 
-      console.log("\n🎬 Movie generated:");
-      console.log(JSON.stringify(movie, null, 2));
+      attemptedTitles.add(movie.title.toLowerCase());
 
       const result = await sendDataToDB(movie, domains);
 
       if (result.success) {
-        console.log("\n🎉 Movie added successfully!");
-        return;
+        console.log("\n🎉 Movie added successfully by automation!");
+        return { success: true, title: movie.title };
       }
 
       if (result.alreadyExists) {
@@ -310,19 +327,53 @@ async function runAutoSeed() {
         continue;
       }
 
+      if (result.retryable) {
+        console.log("🔁 Movie API failed temporarily. Trying another...");
+        continue;
+      }
+
       console.log("❌ Failed to add movie.");
-      return;
+      return {
+        success: false,
+        reason: result.reason || "movie_api_rejected",
+      };
     }
 
     console.log("⚠️ Maximum attempts reached.");
+    return { success: false, reason: "maximum_attempts_reached" };
   } catch (error) {
     console.error("❌ Auto seed error:", error.message);
+    return { success: false, reason: error.message };
   }
 }
 
 async function startAutoSeed() {
+  if (
+    !process.env.MONGO_URI ||
+    !process.env.OMDB_KEY ||
+    !process.env.ADMIN_PASS
+  ) {
+    throw new Error("MONGO_URI, OMDB_KEY, and ADMIN_PASS must be configured");
+  }
+
   await connectDB();
-  await runAutoSeed();
+  return runAutoSeed();
 }
 
 module.exports = { startAutoSeed };
+
+if (require.main === module) {
+  startAutoSeed()
+    .then((result) => {
+      process.exitCode = result?.success ? 0 : 1;
+    })
+    .catch((error) => {
+      console.error("❌ Auto seed process failed:", error.message);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.disconnect();
+      }
+    });
+}

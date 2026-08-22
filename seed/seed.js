@@ -1,5 +1,6 @@
 require("dotenv").config();
 const connectMongo = require("../db/mongo");
+const crypto = require("crypto");
 const Movie = require("../apis/movies/movie.model");
 const { ObjectId } = require("mongodb");
 const redisClient = require("../db/redisClient");
@@ -159,8 +160,16 @@ async function addFlixeoSourceInExistingDocs() {
   }
 }
 
+async function generateAccessToken() {
+  const accessHash = crypto
+    .createHash("sha256")
+    .update(process.env.ACCESS_TOKEN)
+    .digest("hex");
+  console.log("Generated Access Token (SHA-256 Hash):", accessHash);
+}
+
 // Execute the single document update
-addFlixeoSourceInExistingDocs().catch((err) => {
+generateAccessToken().catch((err) => {
   console.error(err);
   process.exit(1);
 });

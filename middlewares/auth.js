@@ -7,9 +7,10 @@ function getHashedAccessToken(secret) {
 
 module.exports = async (req, res, next) => {
   try {
-    const path = req.path || "";
+    // req.path is relative to a mounted router; baseUrl identifies the route group.
+    const routeGroup = req.baseUrl || "";
 
-    if (path.startsWith("/auth") || path.includes("/admin")) {
+    if (routeGroup === "/auth" || routeGroup === "/admin") {
       return next();
     }
 

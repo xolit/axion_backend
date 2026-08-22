@@ -1,10 +1,10 @@
 require("dotenv").config();
 
+const crypto = require("crypto");
+
 module.exports = async (req, res, next) => {
   try {
-    let accessHash = req.headers["x-access-token"];
-    accessHash = accessHash.trim();
-    const expectedHash = process.env.ACCESS_TOKEN;
+    const accessHash = req.headers["x-access-token"];
 
     if (!accessHash) {
       return res.status(401).json({
@@ -13,7 +13,12 @@ module.exports = async (req, res, next) => {
       });
     }
 
-    if (accessHash !== expectedHash) {
+    const expectedHash = crypto
+      .createHash("sha256")
+      .update(process.env.ACCESS_TOKEN)
+      .digest("hex");
+
+    if (accessHash.trim() !== expectedHash) {
       return res.status(401).json({
         success: false,
         error: "Unauthorized: Invalid access token",
@@ -23,6 +28,7 @@ module.exports = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("Error in automation seed middleware:", error);
+
     return res.status(500).json({
       success: false,
       error: "Internal server error",
