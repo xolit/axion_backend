@@ -4,7 +4,7 @@ const router = express.Router();
 let activeRun = null;
 let lastRun = null;
 
-function triggerAutoSeed(req, res) {
+async function triggerAutoSeed(req, res, next) {
   if (activeRun) {
     return res.status(409).json({
       success: false,
@@ -13,31 +13,29 @@ function triggerAutoSeed(req, res) {
   }
 
   lastRun = { status: "running", startedAt: new Date().toISOString() };
-  activeRun = startAutoSeed()
-    .then((result) => {
-      lastRun = {
-        status: result?.success ? "success" : "failed",
-        finishedAt: new Date().toISOString(),
-        result,
-      };
-    })
-    .catch((error) => {
-      lastRun = {
-        status: "failed",
-        finishedAt: new Date().toISOString(),
-        error: error.message,
-      };
-      console.error("Automation run failed:", error);
-    })
-    .finally(() => {
-      activeRun = null;
-    });
+  activeRun = startAutoSeed();
 
-  return res.status(202).json({
-    success: true,
-    message: "Automation started",
-    status: "/automation/status",
-  });
+  try {
+    const result = await activeRun;
+    lastRun = {
+      status: result?.success ? "success" : "failed",
+      finishedAt: new Date().toISOString(),
+      result,
+    };
+    return res.status(result?.success ? 200 : 502).json({
+      success: Boolean(result?.success),
+      result,
+    });
+  } catch (error) {
+    lastRun = {
+      status: "failed",
+      finishedAt: new Date().toISOString(),
+      error: error.message,
+    };
+    return next(error);
+  } finally {
+    activeRun = null;
+  }
 }
 
 router.get("/", triggerAutoSeed);

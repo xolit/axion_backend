@@ -25,6 +25,9 @@ const AutoSeedRouter = require("./apis/automation/automation.route");
 
 const app = express();
 
+// Vercel forwards the client address in X-Forwarded-For through one proxy.
+app.set("trust proxy", 1);
+
 app.use(
   helmet({
     contentSecurityPolicy: {
