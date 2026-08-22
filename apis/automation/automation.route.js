@@ -3,7 +3,7 @@ const { autoseed } = require("../../seed/autoSeed");
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  //   await autoseed();
+  await autoseed();
   res.json({ message: "Automation route is working!" });
 });
 

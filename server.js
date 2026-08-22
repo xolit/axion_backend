@@ -20,6 +20,7 @@ const notifsRouter = require("./apis/notifs/notif.route");
 const adminRouter = require("./apis/admin/admin.route");
 const userRouter = require("./apis/auth/user.routes");
 const authMiddleware = require("./middlewares/auth");
+const automationseedMiddleware = require("./middlewares/automation-seed");
 const AutoSeedRouter = require("./apis/automation/automation.route");
 
 const app = express();
@@ -51,7 +52,12 @@ app.use("/auth", authMiddleware, limiterForAuth, userRouter);
 // in notifs route added limiter in specific route to avoid rate limiting for admin access, but still protect public access
 app.use("/notifs", authMiddleware, limiter, notifsRouter);
 app.use("/admin", authMiddleware, adminRouter);
-app.use("/automation", limiterForAutoSeed, AutoSeedRouter);
+app.use(
+  "/automation",
+  automationseedMiddleware,
+  limiterForAutoSeed,
+  AutoSeedRouter,
+);
 
 app.get("/", limiter, (req, res) =>
   res.json({ ok: true, service: "movies-backend" }),

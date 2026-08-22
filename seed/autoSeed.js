@@ -322,15 +322,7 @@ async function runAutoSeed() {
 
 async function startAutoSeed() {
   await connectDB();
-
   await runAutoSeed();
-
-  setInterval(
-    async () => {
-      await runAutoSeed();
-    },
-    3 * 60 * 1000,
-  );
 }
 
 module.exports = { startAutoSeed };

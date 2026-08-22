@@ -20,7 +20,7 @@ const limiterForAuth = rateLimit({
 
 const limiterForAutoSeed = rateLimit({
   windowMs: 4 * 90 * 1000, // 4 minutes 30 seconds
-  max: 1,
+  max: 2,
   message:
     "Too many requests from this IP, please try again after 4 minutes 30 seconds",
 });
