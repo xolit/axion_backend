@@ -18,8 +18,16 @@ const limiterForAuth = rateLimit({
   message: "Too many requests from this IP, please try again after 1 minute",
 });
 
+const limiterForAutoSeed = rateLimit({
+  windowMs: 4 * 90 * 1000, // 4 minutes 30 seconds
+  max: 1,
+  message:
+    "Too many requests from this IP, please try again after 4 minutes 30 seconds",
+});
+
 module.exports = {
   limiter,
+  limiterForAutoSeed,
   limiterForReq,
   limiterForAuth,
 };

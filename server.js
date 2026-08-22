@@ -4,7 +4,12 @@ const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const morgan = require("morgan");
-const { limiter, limiterForReq, limiterForAuth } = require("./service/limiter");
+const {
+  limiter,
+  limiterForReq,
+  limiterForAuth,
+  limiterForAutoSeed,
+} = require("./service/limiter");
 
 const connectMongo = require("./db/mongo");
 const redisClient = require("./db/redisClient");
@@ -15,7 +20,7 @@ const notifsRouter = require("./apis/notifs/notif.route");
 const adminRouter = require("./apis/admin/admin.route");
 const userRouter = require("./apis/auth/user.routes");
 const authMiddleware = require("./middlewares/auth");
-const { startAutoSeed } = require("./seed/autoSeed");
+const AutoSeedRouter = require("./apis/automation/automation.route");
 
 const app = express();
 
@@ -39,15 +44,14 @@ app.use(morgan("combined"));
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
-app.use(authMiddleware);
-
-app.use("/movie", limiter, moviesRouter);
-app.use("/home", limiter, moviesRouter);
-app.use("/request", limiterForReq, requestsRouter);
-app.use("/auth", limiterForAuth, userRouter);
+app.use("/movie", authMiddleware, limiter, moviesRouter);
+app.use("/home", authMiddleware, limiter, moviesRouter);
+app.use("/request", authMiddleware, limiterForReq, requestsRouter);
+app.use("/auth", authMiddleware, limiterForAuth, userRouter);
 // in notifs route added limiter in specific route to avoid rate limiting for admin access, but still protect public access
-app.use("/notifs", limiter, notifsRouter);
-app.use("/admin", adminRouter);
+app.use("/notifs", authMiddleware, limiter, notifsRouter);
+app.use("/admin", authMiddleware, adminRouter);
+app.use("/automation", limiterForAutoSeed, AutoSeedRouter);
 
 app.get("/", limiter, (req, res) =>
   res.json({ ok: true, service: "movies-backend" }),
@@ -75,8 +79,6 @@ async function start() {
 }
 
 start();
-// start auto seeding process
-startAutoSeed();
 
 process.on("SIGINT", async () => {
   console.log("Shutting down");
