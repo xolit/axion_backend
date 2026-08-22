@@ -86,6 +86,7 @@ async function getRandomMovie(subGenre, excludedTitles = new Set()) {
 
   const randomSearch =
     searchTerms[Math.floor(Math.random() * searchTerms.length)];
+  const page = Math.floor(Math.random() * 5) + 1;
 
   console.log(`🔎 Searching OMDb for: "${randomSearch}"`);
 
@@ -95,198 +96,106 @@ async function getRandomMovie(subGenre, excludedTitles = new Set()) {
   const searchUrl =
     `https://www.omdbapi.com/?s=${encodeURIComponent(randomSearch)}` +
     `&type=${omdbType}` +
+    `&page=${page}` +
     `&apikey=${encodeURIComponent(omdbKey)}`;
 
   const response = await fetch(searchUrl);
 
   const searchData = await response.json();
-
   if (searchData.Response === "False") {
     throw new Error(searchData.Error);
   }
 
   const results = searchData.Search || [];
-
-  if (!results.length) {
-    throw new Error("No movies found.");
-  }
-
   const availableResults = results.filter(
     (result) => !excludedTitles.has(String(result.Title || "").toLowerCase()),
   );
   const resultPool = availableResults.length ? availableResults : results;
-  const firstResult = resultPool[Math.floor(Math.random() * resultPool.length)];
+  if (!resultPool.length) throw new Error("No movies found.");
 
-  const detailUrl =
-    `https://www.omdbapi.com/?i=${encodeURIComponent(firstResult.imdbID)}` +
-    `&apikey=${encodeURIComponent(omdbKey)}`;
-
-  const detailResponse = await fetch(detailUrl);
-
+  const selectedResult =
+    resultPool[Math.floor(Math.random() * resultPool.length)];
+  const detailResponse = await fetch(
+    `https://www.omdbapi.com/?i=${encodeURIComponent(selectedResult.imdbID)}&apikey=${encodeURIComponent(omdbKey)}`,
+  );
   const data = await detailResponse.json();
-
-  if (data.Response === "False") {
-    throw new Error(data.Error);
-  }
+  if (data.Response === "False") throw new Error(data.Error);
 
   let releaseYear = data.Year || "";
-
-  if (releaseYear.includes("–")) {
-    releaseYear = releaseYear.split("–").pop().trim();
-  } else if (releaseYear.includes("-")) {
-    releaseYear = releaseYear.split("-").pop().trim();
+  if (releaseYear.includes("–") || releaseYear.includes("-")) {
+    releaseYear = releaseYear.split(/[–-]/).pop().trim();
   }
 
-  let contentType = "Movie";
-
-  if (data.Type && data.Type.toLowerCase() === "series") {
-    contentType = "Series";
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Hollywood / Bollywood
-  |--------------------------------------------------------------------------
-  */
-
+  const contentType =
+    data.Type?.toLowerCase() === "series" ? "Series" : "Movie";
   const country = (data.Country || "").toLowerCase();
   const language = (data.Language || "").toLowerCase();
 
-  let industry = "Hollywood";
-
-  if (country.includes("india") || language.includes("hindi")) {
-    industry = "Bollywood";
-  }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Final movie object
-  |--------------------------------------------------------------------------
-  */
-
   return {
     title: data.Title || "",
-
     release: releaseYear,
-
     Type:
       data.Genre && data.Genre !== "N/A"
-        ? data.Genre.split(",").map((g) => g.trim())
+        ? data.Genre.split(",").map((genre) => genre.trim())
         : [],
-
     SubGenere: [contentType],
-
-    Wood: [industry],
-
+    Wood: [
+      country.includes("india") || language.includes("hindi")
+        ? "Bollywood"
+        : "Hollywood",
+    ],
     bannerUrl: data.Poster && data.Poster !== "N/A" ? data.Poster : "",
   };
 }
 
-async function sendDataToDB(movieData, domains) {
-  console.log("\n📤 Sending movie to database...");
+function buildSources(title, subGenre, domains) {
+  const slug = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-");
+  const query = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, "+");
+  const isTv = subGenre.toLowerCase().includes("tv");
 
-  const body = {
-    ...movieData,
-    SubGenere: movieData.SubGenere?.[0] || "Movie",
-    MultimoviesDomain: domains.MultimoviesDomain,
-    CineHDDomain: domains.CineHDDomain,
-    FlixeoDomain: domains.FlixeoDomain,
-    CinevaroDomain: domains.CinevaroDomain,
+  return {
+    Multimovies: `https://multimovies${domains.MultimoviesDomain}/${isTv ? "tvshows" : "movies"}/${slug}/`,
+    CineHD: `https://cinehd${domains.CineHDDomain}/search?q=${query}`,
+    Flixeo: `https://flixeo${domains.FlixeoDomain}/search?q=${query}`,
+    Cinevaro: `https://cinevaro${domains.CinevaroDomain}/#/browse/${query}`,
   };
+}
+
+async function sendDataToDB(movieData, domains) {
+  console.log("\n📤 Saving movie directly to MongoDB...");
+  const escapedTitle = movieData.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const existingMovie = await Movie.exists({
+    title: { $regex: `^${escapedTitle}$`, $options: "i" },
+    release: movieData.release,
+  });
+
+  if (existingMovie) {
+    console.log(`⚠️ "${movieData.title}" already exists in DB.`);
+    return { success: false, alreadyExists: true };
+  }
 
   try {
-    const apiBaseUrl = (
-      process.env.AUTOMATION_API_URL ||
-      process.env.PUBLIC_API_URL ||
-      `http://127.0.0.1:${process.env.PORT || 8080}`
-    ).replace(/\/$/, "");
-    const addMovieUrl = `${apiBaseUrl}/admin/movie/add?adminPass=${encodeURIComponent(process.env.ADMIN_PASS)}`;
-
-    const response = await fetch(addMovieUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-      redirect: "manual",
-      signal: AbortSignal.timeout(15000),
+    await Movie.create({
+      ...movieData,
+      Source: buildSources(movieData.title, movieData.SubGenere[0], domains),
     });
-
-    console.log("\n📡 API status:", response.status);
-
-    const location = response.headers.get("location");
-
-    const responseText = await response.text();
-
-    if (response.status >= 300 && response.status < 400) {
-      if (location) {
-        const decodedLocation = decodeURIComponent(location).replace(
-          /\+/g,
-          " ",
-        );
-
-        if (decodedLocation.toLowerCase().includes("already exists")) {
-          console.log(`⚠️ "${movieData.title}" already exists in DB.`);
-
-          return {
-            success: false,
-            alreadyExists: true,
-          };
-        }
-
-        if (decodedLocation.toLowerCase().includes("success")) {
-          console.log(`✅ "${movieData.title}" added successfully!`);
-
-          return {
-            success: true,
-            alreadyExists: false,
-          };
-        }
-
-        if (decodedLocation.toLowerCase().includes("error")) {
-          console.log(`❌ API returned an error for "${movieData.title}".`);
-
-          return {
-            success: false,
-            alreadyExists: false,
-            retryable: false,
-            reason: "movie_api_redirected_to_error",
-          };
-        }
-      }
-
-      return {
-        success: false,
-        alreadyExists: false,
-        retryable: false,
-        reason: "movie_api_unrecognized_redirect",
-      };
-    }
-
-    if (response.ok) {
-      console.log(`✅ "${movieData.title}" added successfully!`);
-
-      return {
-        success: true,
-        alreadyExists: false,
-      };
-    }
-
-    console.log(`❌ API request failed with status ${response.status}`);
-
-    return {
-      success: false,
-      alreadyExists: false,
-      retryable: response.status >= 500 || response.status === 429,
-      reason: `movie_api_status_${response.status}`,
-    };
+    console.log(`✅ "${movieData.title}" added successfully!`);
+    return { success: true, alreadyExists: false };
   } catch (error) {
-    console.error("❌ Error adding movie to DB:", error.message);
-
+    console.error("❌ Error saving movie to MongoDB:", error.message);
     return {
       success: false,
       alreadyExists: false,
       retryable: true,
+      reason: "mongodb_insert_failed",
     };
   }
 }
